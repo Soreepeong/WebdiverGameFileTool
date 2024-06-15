@@ -63,13 +63,28 @@ public class KmpFile {
         rootNode.Skin = gltfRoot.Root.Skins.AddAndGetIndex(skin);
 
         Span<int> boneToNode = stackalloc int[this.Skeleton.BoneCount];
+        var trsabs = new Matrix4x4[this.Skeleton.BoneCount];
         for (var i = 0; i < this.Skeleton.BoneCount; i++) {
+            if (!Matrix4x4.Invert(this.Skeleton.TrsInverseRelative.GetComposed(i), out var rel)
+                || !Matrix4x4.Decompose(rel, out var s, out var q, out var t))
+                throw new InvalidOperationException();
+
+            trsabs[i] = Matrix4x4.Invert(
+                Matrix4x4.CreateScale(s) *
+                Matrix4x4.CreateFromQuaternion(q) *
+                Matrix4x4.CreateTranslation(t)
+                , out var tt)
+                ? tt
+                : throw new InvalidOperationException();
+            if (this.Skeleton.BoneParents[i] != -1)
+                trsabs[i] = trsabs[this.Skeleton.BoneParents[i]] * trsabs[i];
+
             var nodeIndex = gltfRoot.Root.Nodes.AddAndGetIndex(new() {
                 Name = $"Bone{i}",
                 Children = [],
-                Translation = this.Skeleton.Trs1.Translation[i].ToFloatList(Vector3.Zero),
-                Rotation = this.Skeleton.Trs1.Rotation[i].ToFloatList(Quaternion.Identity),
-                Scale = this.Skeleton.Trs1.Scale[i].ToFloatList(Vector3.One),
+                Translation = t.ToFloatList(Vector3.Zero),
+                Rotation = q.ToFloatList(Quaternion.Identity),
+                Scale = s.ToFloatList(Vector3.One),
             });
             skin.Joints.Add(nodeIndex);
             boneToNode[i] = nodeIndex;
@@ -83,7 +98,7 @@ public class KmpFile {
         skin.InverseBindMatrices = gltfRoot.AddAccessor(
             null,
             Enumerable.Range(0, this.Skeleton.BoneCount)
-                .Select(x => this.Skeleton.GetAbsoluteInverseBindPoseMatrix(this.Skeleton.Trs1, x).Normalize()).ToArray()
+                .Select(boneIndex => trsabs[boneIndex].Normalize()).ToArray()
                 .AsSpan());
 
         var mesh = new GltfMesh();
@@ -108,16 +123,16 @@ public class KmpFile {
                         materialAndMesh.Vertices.Select(x => x.Uv).ToArray().AsSpan(),
                         target: GltfBufferViewTarget.ArrayBuffer),
                     Weights0 = gltfRoot.AddAccessor(
-                            null,
-                            materialAndMesh.Vertices.Select(_ => new Vector4(1, 0, 0, 0)).ToArray().AsSpan(),
-                            target: GltfBufferViewTarget.ArrayBuffer),
+                        null,
+                        materialAndMesh.Vertices.Select(_ => new Vector4(1, 0, 0, 0)).ToArray().AsSpan(),
+                        target: GltfBufferViewTarget.ArrayBuffer),
                     Joints0 = gltfRoot.AddAccessor(
-                            null,
-                            materialAndMesh.Vertices.Select(
-                                    x => new Vector4<ushort>((ushort) this.Model.Data3[x.Data3Index].Value1, 0, 0, 0))
-                                .ToArray()
-                                .AsSpan(),
-                            target: GltfBufferViewTarget.ArrayBuffer),
+                        null,
+                        materialAndMesh.Vertices.Select(
+                                x => new Vector4<ushort>((ushort) this.Model.Data3[x.Data3Index].Value1, 0, 0, 0))
+                            .ToArray()
+                            .AsSpan(),
+                        target: GltfBufferViewTarget.ArrayBuffer),
                 },
                 Indices = gltfRoot.AddAccessor(
                     null,
@@ -138,6 +153,51 @@ public class KmpFile {
             });
         }
 
+        foreach (var animation in this.Animation.Animations) {
+            var target = new GltfAnimation();
+            foreach (var track in animation.Tracks) {
+                var times = gltfRoot.AddAccessor(null, track.Times.AsSpan());
+                target.Channels.Add(new() {
+                    Sampler = target.Samplers.AddAndGetIndex(
+                        new() {
+                            Input = times,
+                            Output = gltfRoot.AddAccessor(null, track.Trs.Translation.AsSpan()),
+                            Interpolation = GltfAnimationSamplerInterpolation.Linear,
+                        }),
+                    Target = new() {
+                        Node = boneToNode[track.BoneIndex],
+                        Path = GltfAnimationChannelTargetPath.Translation,
+                    },
+                });
+                target.Channels.Add(new() {
+                    Sampler = target.Samplers.AddAndGetIndex(
+                        new() {
+                            Input = times,
+                            Output = gltfRoot.AddAccessor(null, track.Trs.Rotation.AsSpan()),
+                            Interpolation = GltfAnimationSamplerInterpolation.Linear,
+                        }),
+                    Target = new() {
+                        Node = boneToNode[track.BoneIndex],
+                        Path = GltfAnimationChannelTargetPath.Rotation,
+                    },
+                });
+                target.Channels.Add(new() {
+                    Sampler = target.Samplers.AddAndGetIndex(
+                        new() {
+                            Input = times,
+                            Output = gltfRoot.AddAccessor(null, track.Trs.Scale.AsSpan()),
+                            Interpolation = GltfAnimationSamplerInterpolation.Linear,
+                        }),
+                    Target = new() {
+                        Node = boneToNode[track.BoneIndex],
+                        Path = GltfAnimationChannelTargetPath.Scale,
+                    },
+                });
+            }
+
+            gltfRoot.Root.Animations.Add(target);
+        }
+        
         gltfRoot.CompileSingleBufferToFiles(outDir, outName, default).Wait();
     }
 }
