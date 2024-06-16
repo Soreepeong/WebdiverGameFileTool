@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using WebdiverGameFileTool.Util;
 
 namespace WebdiverGameFileTool.FileFormats.KmpChunks;
@@ -8,13 +9,13 @@ public struct ModelKmpChunk {
     public const uint ChunkMagic = 0x6B4D0000;
 
     public int VertexCount;
-    public Vector3AndInt[] Vertices;
+    public Vector3AndSkinIndex[] Vertices;
 
     public int NormalCount;
-    public Vector3AndInt[] Normals;
+    public Vector3AndSkinIndex[] Normals;
 
-    public int Count3;
-    public Something[] Data3;
+    public int SkinCount;
+    public Skin[] Skins;
 
     public int MeshCount;
     public Mesh[] Meshes;
@@ -25,11 +26,11 @@ public struct ModelKmpChunk {
 
         this.VertexCount = data.ReadAndAdvance<int>();
         this.NormalCount = data.ReadAndAdvance<int>();
-        this.Count3 = data.ReadAndAdvance<int>();
+        this.SkinCount = data.ReadAndAdvance<int>();
 
-        this.Vertices = data.ReadAndAdvance<Vector3AndInt>(this.VertexCount);
-        this.Normals = data.ReadAndAdvance<Vector3AndInt>(this.NormalCount);
-        this.Data3 = data.ReadAndAdvance<Something>(this.Count3);
+        this.Vertices = data.ReadAndAdvance<Vector3AndSkinIndex>(this.VertexCount);
+        this.Normals = data.ReadAndAdvance<Vector3AndSkinIndex>(this.NormalCount);
+        this.Skins = data.ReadAndAdvance<Skin>(this.SkinCount);
 
         this.MeshCount = data.ReadAndAdvance<int>();
         this.Meshes = new Mesh[this.MeshCount];
@@ -37,15 +38,17 @@ public struct ModelKmpChunk {
             this.Meshes[i] = new(ref data);
     }
 
-    [DebuggerDisplay("{Value1}, {Value2}")]
-    public struct Vector3AndInt {
-        public Vector3 Value1;
-        public int Value2; // References to an item in Data3
+    [DebuggerDisplay("{Value}, {SkinIndex}")]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Vector3AndSkinIndex {
+        public Vector3 Value;
+        public int SkinIndex;
     }
 
-    [DebuggerDisplay("{Value1}, {Value2}, {Value3}")]
-    public struct Something {
-        public int Value1;
+    [DebuggerDisplay("{BoneIndex}, {Value2}, {Value3}")]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Skin {
+        public int BoneIndex;
         public float Value2;
         public float Value3;
     }
@@ -67,19 +70,21 @@ public struct ModelKmpChunk {
             this.Indices = data.ReadAndAdvance<IndexSet>(this.IndexCount);
         }
 
-        [DebuggerDisplay("{VertexIndex}, {NormalIndex}, {Data3Index}, {Uv}")]
+        [DebuggerDisplay("{VertexIndex}, {NormalIndex}, {SkinIndex}, {Uv}")]
+        [StructLayout(LayoutKind.Sequential)]
         public struct MeshVertex {
-            public int VertexIndex; // Index in Data1
+            public int VertexIndex;
             public int NormalIndex;
-            public int Data3Index; // Index in Data3
+            public int SkinIndex;
             public Vector2 Uv;
         }
 
-        [DebuggerDisplay("{Value1}, {Value2}, {Value3}")]
+        [DebuggerDisplay("{Vertex1}, {Vertex2}, {Vertex3}")]
+        [StructLayout(LayoutKind.Sequential)]
         public struct IndexSet {
-            public short Value1;
-            public short Value2;
-            public short Value3;
+            public short Vertex1;
+            public short Vertex2;
+            public short Vertex3;
         }
     }
 }

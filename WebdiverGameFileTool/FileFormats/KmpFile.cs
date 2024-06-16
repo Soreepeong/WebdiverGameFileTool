@@ -51,7 +51,6 @@ public class KmpFile {
 
     public GltfTuple Export(string rootDir) {
         var gltfRoot = new GltfTuple();
-        gltfRoot = new();
         gltfRoot.Root.ExtensionsUsed.Add("KHR_materials_specular");
         gltfRoot.Root.ExtensionsUsed.Add("KHR_materials_pbrSpecularGlossiness");
         gltfRoot.Root.ExtensionsUsed.Add("KHR_materials_emissive_strength");
@@ -103,13 +102,13 @@ public class KmpFile {
                 Attributes = new() {
                     Position = gltfRoot.AddAccessor(
                         null,
-                        materialAndMesh.Vertices.Select(x => this.Model.Vertices[x.VertexIndex].Value1).ToArray()
+                        materialAndMesh.Vertices.Select(x => this.Model.Vertices[x.VertexIndex].Value).ToArray()
                             .AsSpan(),
                         target: GltfBufferViewTarget.ArrayBuffer),
                     Normal = gltfRoot.AddAccessor(
                         null,
                         materialAndMesh.Vertices
-                            .Select(x => Vector3.Normalize(this.Model.Normals[x.NormalIndex].Value1)).ToArray()
+                            .Select(x => Vector3.Normalize(this.Model.Normals[x.NormalIndex].Value)).ToArray()
                             .AsSpan(),
                         target: GltfBufferViewTarget.ArrayBuffer),
                     TexCoord0 = gltfRoot.AddAccessor(
@@ -123,7 +122,7 @@ public class KmpFile {
                     Joints0 = gltfRoot.AddAccessor(
                         null,
                         materialAndMesh.Vertices.Select(
-                                x => new Vector4<ushort>((ushort) this.Model.Data3[x.Data3Index].Value1, 0, 0, 0))
+                                x => new Vector4<ushort>((ushort) this.Model.Skins[x.SkinIndex].BoneIndex, 0, 0, 0))
                             .ToArray()
                             .AsSpan(),
                         target: GltfBufferViewTarget.ArrayBuffer),

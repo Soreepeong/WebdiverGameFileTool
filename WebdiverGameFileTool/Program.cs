@@ -8,7 +8,7 @@ public static class Program {
         const string outDir = @".\Data\Output";
 
         foreach (var path in Directory.GetFiles(rootDir, "*.kmp")) {
-            if (!path.EndsWith("\\ga.kmp", StringComparison.InvariantCultureIgnoreCase)) continue;
+            // if (!path.EndsWith("\\ga.kmp", StringComparison.InvariantCultureIgnoreCase)) continue;
             new KmpFile(File.ReadAllBytes(path))
                 .Export(rootDir)
                 .CompileSingleBufferToFile(
