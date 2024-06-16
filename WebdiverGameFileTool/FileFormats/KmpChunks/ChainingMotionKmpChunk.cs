@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using WebdiverGameFileTool.Util;
 
 namespace WebdiverGameFileTool.FileFormats.KmpChunks;
@@ -32,13 +33,14 @@ public struct ChainingMotionKmpChunk {
             this.Values = data.ReadAndAdvance<Inner2>(this.Count);
         }
 
-        [DebuggerDisplay("{AnimationIndex}, {Value2}, {Value3}, {Value4}, {Value5}, {Value6}, {Value7}, {Value8}, {Value9}, {ValueA}")]
+        [DebuggerDisplay("{AnimationIndex}, {BeginTime}, {Value3}, {Value4}, {PlaybackSpeed}, {Value6}, {Value7}, {Value8}, {Value9}, {ValueA}")]
+        [StructLayout(LayoutKind.Sequential)]
         public struct Inner2 {
             public int AnimationIndex;
-            public float Value2;
+            public float BeginTime;
             public float Value3;
             public float Value4;
-            public float Value5;
+            public float PlaybackSpeed;
             public int Value6;
             public float Value7;
             public float Value8;

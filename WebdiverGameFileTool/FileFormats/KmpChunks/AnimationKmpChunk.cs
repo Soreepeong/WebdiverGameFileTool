@@ -21,7 +21,7 @@ public struct AnimationKmpChunk {
     }
 
     public struct Animation {
-        public int AnimationCount;
+        public int TrackCount;
         public float Duration;
         public float FrameDuration;
         public byte Byte1;
@@ -38,7 +38,7 @@ public struct AnimationKmpChunk {
         public Track[] Tracks;
             
         public Animation(ref ReadOnlySpan<byte> data) {
-            this.AnimationCount = data.ReadAndAdvance<int>();
+            this.TrackCount = data.ReadAndAdvance<int>();
             this.Duration = data.ReadAndAdvance<float>();
             this.FrameDuration = data.ReadAndAdvance<float>();
             this.Byte1 = data.ReadAndAdvance<byte>();
@@ -52,9 +52,21 @@ public struct AnimationKmpChunk {
             this.SmthCount3 = data.ReadAndAdvance<int>();
             this.Smth3 = data.ReadAndAdvance<Inner2>(this.SmthCount3);
 
-            this.Tracks = new Track[this.AnimationCount];
-            for (var i = 0; i < this.AnimationCount; i++)
+            this.Tracks = new Track[this.TrackCount];
+            for (var i = 0; i < this.TrackCount; i++)
                 this.Tracks[i] = new(ref data);
+        }
+
+        public readonly bool TryFindTrack(int boneIndex, out Track track) {
+            foreach (var t in this.Tracks) {
+                if (t.BoneIndex == boneIndex) {
+                    track = t;
+                    return true;
+                }
+            }
+
+            track = default;
+            return false;
         }
 
         [DebuggerDisplay("{Value1}, {Value2}, {Value3}")]
@@ -64,23 +76,23 @@ public struct AnimationKmpChunk {
             public float Value3;
         }
 
-        [DebuggerDisplay("{BoneIndex}, {Count}")]
+        [DebuggerDisplay("{BoneIndex}, {FrameCount}")]
         public struct Track {
             public int BoneIndex; // probably
-            public int Count;
-            public float[] Times;
-            public TrsArray Trs;
+            public int FrameCount;
+            public float[] FrameTimes;
+            public TrsArray FrameTrs;
                 
             public Track(ref ReadOnlySpan<byte> data) { 
                 this.BoneIndex = data.ReadAndAdvance<int>();
-                this.Count = data.ReadAndAdvance<int>();
-                this.Times = new float[this.Count];
-                this.Trs = new(this.Count);
-                for (var i = 0; i < this.Count; i++) {
-                    this.Times[i] = data.ReadAndAdvance<float>();
-                    this.Trs.Scale[i] = data.ReadAndAdvance<Vector3>();
-                    this.Trs.Rotation[i] = data.ReadAndAdvance<Quaternion>();
-                    this.Trs.Translation[i] = data.ReadAndAdvance<Vector3>();
+                this.FrameCount = data.ReadAndAdvance<int>();
+                this.FrameTimes = new float[this.FrameCount];
+                this.FrameTrs = new(this.FrameCount);
+                for (var i = 0; i < this.FrameCount; i++) {
+                    this.FrameTimes[i] = data.ReadAndAdvance<float>();
+                    this.FrameTrs.Scale[i] = data.ReadAndAdvance<Vector3>();
+                    this.FrameTrs.Rotation[i] = data.ReadAndAdvance<Quaternion>();
+                    this.FrameTrs.Translation[i] = data.ReadAndAdvance<Vector3>();
                 }
             }
         }

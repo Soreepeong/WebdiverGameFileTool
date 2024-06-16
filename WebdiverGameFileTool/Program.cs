@@ -6,7 +6,14 @@ public static class Program {
     public static void Main() {
         const string rootDir = @".\Data\Input\Web";
         const string outDir = @".\Data\Output";
-        foreach (var k in new[] {"Gd", "Ga", "Dr", "Wb"})
-            new KmpFile(File.ReadAllBytes(Path.Join(rootDir, $"{k}.kmp"))).Export(rootDir, outDir, k);
+
+        foreach (var path in Directory.GetFiles(rootDir, "*.kmp")) {
+            if (!path.EndsWith("\\ga.kmp", StringComparison.InvariantCultureIgnoreCase)) continue;
+            new KmpFile(File.ReadAllBytes(path))
+                .Export(rootDir)
+                .CompileSingleBufferToFile(
+                    Path.Join(outDir, Path.ChangeExtension(Path.GetFileNameWithoutExtension(path), ".glb")));
+            // .CompileSingleBufferToFiles(outDir, Path.GetFileNameWithoutExtension(path), default).Wait();
+        }
     }
 }

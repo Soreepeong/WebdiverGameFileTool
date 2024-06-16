@@ -25,6 +25,9 @@ public class GltfNode : BaseGltfObject {
     [JsonProperty("translation", NullValueHandling = NullValueHandling.Ignore)]
     public List<float>? Translation;
 
+    [JsonProperty("matrix", NullValueHandling = NullValueHandling.Ignore)]
+    public List<float>? Matrix;
+
     [UsedImplicitly]
     public bool ShouldSerializeChildren() => Children.Any();
 }

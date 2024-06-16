@@ -20,8 +20,8 @@ public readonly struct TrsArray {
         this.Translation = data.ReadAndAdvance<Vector3>(count);
     }
 
-    public Matrix4x4 GetComposed(int boneIndex) => 
-        Matrix4x4.CreateScale(this.Scale[boneIndex]) *
-        Matrix4x4.CreateFromQuaternion(this.Rotation[boneIndex]) *
-        Matrix4x4.CreateTranslation(this.Translation[boneIndex]);
+    public Matrix4x4 GetComposed(int index) => 
+        Matrix4x4.CreateTranslation(-this.Translation[index]) *
+        Matrix4x4.CreateFromQuaternion(this.Rotation[index]) *
+        Matrix4x4.CreateScale(this.Scale[index]);
 }
